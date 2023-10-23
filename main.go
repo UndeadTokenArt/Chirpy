@@ -8,7 +8,7 @@ import (
 func main() {
 	mux := http.NewServeMux()
 	corsMux := middlewareCors(mux)
-
+	mux.Handle("/", http.FileServer(http.Dir(".")))
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: corsMux,
