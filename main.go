@@ -14,11 +14,12 @@ func main() {
 		Handler: corsMux,
 	}
 
+	fmt.Println("Server is running on http://localhost:8080")
+
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		panic(err)
 	}
 
-	fmt.Println("Server is running on http://localhost:8080")
 }
 
 func middlewareCors(next http.Handler) http.Handler {
