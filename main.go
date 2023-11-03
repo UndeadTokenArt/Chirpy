@@ -7,14 +7,10 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type apiConfig struct {
-	fileserverHits int
-}
-
 func main() {
 	router := chi.NewRouter()
 	apiRouter := chi.NewRouter()
-	router.Mount("/api", apiRouter)
+	adminRouter := chi.NewRouter()
 	corsMux := middlewareCors(router)
 
 	apiCfg := apiConfig{
@@ -22,9 +18,13 @@ func main() {
 	}
 
 	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir("."))))
-
+	// Mounted sub router for api access and Admin access
+	router.Mount("/api", apiRouter)
+	router.Mount("/admin", adminRouter)
+	// handling the app route
 	router.Handle("/app/*", fsHandler)
 	router.Handle("/app", fsHandler)
+	//
 	apiRouter.Get("/metrics", apiCfg.handlerMetrics)
 	apiRouter.Get("/reset", apiCfg.handlerReset)
 	apiRouter.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -45,36 +45,4 @@ func main() {
 		panic(err)
 	}
 
-}
-
-func middlewareCors(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
-		w.Header().Set("Access-Control-Allow-Headers", "*")
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Hits: %d", cfg.fileserverHits)))
-}
-
-func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.fileserverHits++
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
-	cfg.fileserverHits = 0
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Hits reset to 0"))
 }
