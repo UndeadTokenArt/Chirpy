@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type apiConfig struct {
@@ -10,17 +12,22 @@ type apiConfig struct {
 }
 
 func main() {
-	mux := http.NewServeMux()
-	corsMux := middlewareCors(mux)
+	router := chi.NewRouter()
+	apiRouter := chi.NewRouter()
+	router.Mount("/api", apiRouter)
+	corsMux := middlewareCors(router)
 
 	apiCfg := apiConfig{
 		fileserverHits: 0,
 	}
 
-	mux.Handle("/app/", apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(".")))))
-	mux.HandleFunc("/metrics", apiCfg.handlerMetrics)
-	mux.HandleFunc("/reset", apiCfg.handlerReset)
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir("."))))
+
+	router.Handle("/app/*", fsHandler)
+	router.Handle("/app", fsHandler)
+	apiRouter.Get("/metrics", apiCfg.handlerMetrics)
+	apiRouter.Get("/reset", apiCfg.handlerReset)
+	apiRouter.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		r.Header.Add("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(http.StatusText(http.StatusOK)))
