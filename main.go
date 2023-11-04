@@ -21,10 +21,13 @@ func main() {
 	// Mounted sub router for api access and Admin access
 	router.Mount("/api", apiRouter)
 	router.Mount("/admin", adminRouter)
+
 	// handling the app route
 	router.Handle("/app/*", fsHandler)
 	router.Handle("/app", fsHandler)
-	//
+
+	adminRouter.Get("/metrics", apiCfg.metricsHandler)
+
 	apiRouter.Get("/metrics", apiCfg.handlerMetrics)
 	apiRouter.Get("/reset", apiCfg.handlerReset)
 	apiRouter.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
