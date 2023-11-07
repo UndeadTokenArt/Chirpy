@@ -62,7 +62,7 @@ func (cfg *apiConfig) handleValidate(w http.ResponseWriter, r *http.Request) {
 
 	type returnVals struct {
 		Body  string `json:"body"`
-		Error string  `json:"error"`
+		Error string `json:"error"`
 		Valid bool   `json:"valid"`
 	}
 	respBody := returnVals{}
@@ -99,13 +99,12 @@ func (cfg *apiConfig) handleValidate(w http.ResponseWriter, r *http.Request) {
 	w.Write(dat)
 
 }
-func censorChirps (chirp string) string {
-	badwords := []string
-	append(badwords, "kerfuffle", "sharbert", "fornax")
-	words := strings.Fields(chirp)
-	for _, word := range words {
-		for _, badword := badwords {
-			strings.Replace(chirp, word, "****", 1)
-		}
+func censorChirps(chirp string) string {
+	var badwords []string
+	badwords = append(badwords, "kerfuffle", "sharbert", "fornax")
+	for _, badword := range badwords {
+		fmt.Printf("bad word: %s and current chirp: %s\n", badword, chirp)
+		chirp = strings.Replace(chirp, badword, "****", -1)
 	}
+	return chirp
 }
