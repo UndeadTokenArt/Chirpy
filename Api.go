@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"strings"
 )
 
 type apiConfig struct {
@@ -28,7 +31,7 @@ func (cfg *apiConfig) handlerReset(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Hits reset to 0"))
 }
 
-func (cfg *apiConfig) metricsHandler(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) metricsHtml(w http.ResponseWriter, r *http.Request) {
 	r.Header.Add("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	templateHtml := `
@@ -42,4 +45,67 @@ func (cfg *apiConfig) metricsHandler(w http.ResponseWriter, r *http.Request) {
 	</html>
 	`
 	w.Write([]byte(fmt.Sprintf(templateHtml, cfg.fileserverHits)))
+}
+
+func (cfg *apiConfig) handleHealthZ(w http.ResponseWriter, r *http.Request) {
+	r.Header.Add("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(http.StatusText(http.StatusOK)))
+}
+
+func (cfg *apiConfig) handleValidate(w http.ResponseWriter, r *http.Request) {
+	r.Header.Add("Content-Type", "application/json")
+
+	type paramaters struct {
+		Body string `json:"body"`
+	}
+
+	type returnVals struct {
+		Body  string `json:"body"`
+		Error string  `json:"error"`
+		Valid bool   `json:"valid"`
+	}
+	respBody := returnVals{}
+
+	decoder := json.NewDecoder(r.Body)
+	params := paramaters{}
+
+	err := decoder.Decode(&params)
+	if err != nil {
+		log.Printf("error decoding paramaters: %v", err)
+		w.WriteHeader(500)
+	}
+
+	if len(params.Body) > 140 {
+		respBody.Error = "chirp is too long"
+		respBody.Valid = false
+		w.WriteHeader(400)
+	} else {
+		cleaned := censorChirps(params.Body)
+		respBody.Body = cleaned
+		respBody.Valid = true
+		w.WriteHeader(200)
+	}
+
+	// form the response back to the client from the respBody
+	dat, err := json.Marshal(respBody)
+	if err != nil {
+		log.Printf("Error marshalling JSON: %s", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(dat)
+
+}
+func censorChirps (chirp string) string {
+	badwords := []string
+	append(badwords, "kerfuffle", "sharbert", "fornax")
+	words := strings.Fields(chirp)
+	for _, word := range words {
+		for _, badword := badwords {
+			strings.Replace(chirp, word, "****", 1)
+		}
+	}
 }

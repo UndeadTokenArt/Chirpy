@@ -22,20 +22,18 @@ func main() {
 	router.Mount("/api", apiRouter)
 	router.Mount("/admin", adminRouter)
 
-	// handling the app route
+	// handling the /app route
 	router.Handle("/app/*", fsHandler)
 	router.Handle("/app", fsHandler)
 
-	adminRouter.Get("/metrics", apiCfg.metricsHandler)
+	// handling the /admin routes
+	adminRouter.Get("/metrics", apiCfg.metricsHtml)
 
+	// handling the /api routes
 	apiRouter.Get("/metrics", apiCfg.handlerMetrics)
 	apiRouter.Get("/reset", apiCfg.handlerReset)
-	apiRouter.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		r.Header.Add("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(http.StatusText(http.StatusOK)))
-	},
-	)
+	apiRouter.Get("/healthz", apiCfg.handleHealthZ)
+	apiRouter.Post("/validate_chirp", apiCfg.handleValidate)
 
 	srv := &http.Server{
 		Addr:    ":8080",
