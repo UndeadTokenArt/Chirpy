@@ -61,50 +61,53 @@ func (cfg *apiConfig) handleValidate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type returnVals struct {
-		Body  string `json:"body"`
-		Error string `json:"error"`
-		Valid bool   `json:"valid"`
+		Cleaned_body string `json:"cleaned_body"`
 	}
 	respBody := returnVals{}
 
 	decoder := json.NewDecoder(r.Body)
 	params := paramaters{}
-
 	err := decoder.Decode(&params)
 	if err != nil {
 		log.Printf("error decoding paramaters: %v", err)
 		w.WriteHeader(500)
 	}
-
 	if len(params.Body) > 140 {
-		respBody.Error = "chirp is too long"
-		respBody.Valid = false
 		w.WriteHeader(400)
 	} else {
 		cleaned := censorChirps(params.Body)
-		respBody.Body = cleaned
-		respBody.Valid = true
-		w.WriteHeader(200)
+		respBody.Cleaned_body = cleaned
+		w.WriteHeader(http.StatusOK)
 	}
+	respondWithJson(w, http.StatusOK, respBody)
+}
 
-	// form the response back to the client from the respBody
-	dat, err := json.Marshal(respBody)
+func censorChirps(body string) string {
+	badWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
+	words := strings.Split(body, " ")
+	for i, word := range words {
+		loweredWord := strings.ToLower(word)
+		if _, ok := badWords[loweredWord]; ok {
+			words[i] = "****"
+		}
+	}
+	cleaned := strings.Join(words, " ")
+	return cleaned
+}
+
+func respondWithJson(w http.ResponseWriter, status int, message interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	dat, err := json.Marshal(message)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)
+		w.WriteHeader(500)
 		return
 	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
 	w.Write(dat)
 
-}
-func censorChirps(chirp string) string {
-	var badwords []string
-	badwords = append(badwords, "kerfuffle", "sharbert", "fornax")
-	for _, badword := range badwords {
-		fmt.Printf("bad word: %s and current chirp: %s\n", badword, chirp)
-		chirp = strings.Replace(chirp, badword, "****", -1)
-	}
-	return chirp
 }
