@@ -89,7 +89,7 @@ func (cfg *apiConfig) handlerPostChirp(w http.ResponseWriter, r *http.Request) {
 	{
 		cleaned := censorChirps(params.Body)
 		respBody.Body = cleaned
-		respBody.Id = assignID(respBody, int)
+		respBody.Id = assignID(respBody)
 		w.WriteHeader(201)
 	}
 	respondWithJson(w, 201, respBody)
