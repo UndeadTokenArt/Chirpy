@@ -22,3 +22,4 @@ go.work
 
 # ignore the binary
 chirpy
+database.json

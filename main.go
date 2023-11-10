@@ -8,16 +8,16 @@ import (
 )
 
 func main() {
-	router := chi.NewRouter()
-	apiRouter := chi.NewRouter()
-	adminRouter := chi.NewRouter()
-	corsMux := middlewareCors(router)
-
 	apiCfg := apiConfig{
 		fileserverHits: 0,
 	}
 
+	router := chi.NewRouter()
+	apiRouter := chi.NewRouter()
+	adminRouter := chi.NewRouter()
+	corsMux := middlewareCors(router)
 	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir("."))))
+
 	// Mounted sub router for api access and Admin access
 	router.Mount("/api", apiRouter)
 	router.Mount("/admin", adminRouter)
@@ -32,8 +32,8 @@ func main() {
 	// handling the /api routes
 	apiRouter.Get("/metrics", apiCfg.handlerMetrics)
 	apiRouter.Get("/reset", apiCfg.handlerReset)
-	apiRouter.Get("/healthz", apiCfg.handleHealthZ)
-	apiRouter.Post("/validate_chirp", apiCfg.handleValidate)
+	apiRouter.Get("/healthz", apiCfg.handlerHealthZ)
+	apiRouter.Post("/chirps", apiCfg.handlerChirp)
 
 	srv := &http.Server{
 		Addr:    ":8080",

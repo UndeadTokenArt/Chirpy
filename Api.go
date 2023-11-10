@@ -47,24 +47,31 @@ func (cfg *apiConfig) metricsHtml(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(fmt.Sprintf(templateHtml, cfg.fileserverHits)))
 }
 
-func (cfg *apiConfig) handleHealthZ(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerHealthZ(w http.ResponseWriter, r *http.Request) {
 	r.Header.Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(http.StatusText(http.StatusOK)))
 }
+func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
+	// returns the current list of chirps
+}
 
-func (cfg *apiConfig) handleValidate(w http.ResponseWriter, r *http.Request) {
+func (cfg *apiConfig) handlerPostChirp(w http.ResponseWriter, r *http.Request) {
 	r.Header.Add("Content-Type", "application/json")
-
+	// expected structure of request
 	type paramaters struct {
 		Body string `json:"body"`
 	}
 
+	// structure of the response
 	type returnVals struct {
-		Cleaned_body string `json:"cleaned_body"`
+		Id   int    `json:"id"`
+		Body string `json:"Body"`
 	}
+	// create a response interface
 	respBody := returnVals{}
 
+	// json Decoding so we can mess with the data
 	decoder := json.NewDecoder(r.Body)
 	params := paramaters{}
 	err := decoder.Decode(&params)
@@ -72,14 +79,20 @@ func (cfg *apiConfig) handleValidate(w http.ResponseWriter, r *http.Request) {
 		log.Printf("error decoding paramaters: %v", err)
 		w.WriteHeader(500)
 	}
+
+	// If the length of the Chirp is too long
 	if len(params.Body) > 140 {
 		w.WriteHeader(400)
-	} else {
+	} else
+
+	// fill in the fields and prep for response
+	{
 		cleaned := censorChirps(params.Body)
-		respBody.Cleaned_body = cleaned
-		w.WriteHeader(http.StatusOK)
+		respBody.Body = cleaned
+		respBody.Id = assignID(respBody, int)
+		w.WriteHeader(201)
 	}
-	respondWithJson(w, http.StatusOK, respBody)
+	respondWithJson(w, 201, respBody)
 }
 
 func censorChirps(body string) string {
@@ -110,4 +123,9 @@ func respondWithJson(w http.ResponseWriter, status int, message interface{}) {
 	w.WriteHeader(status)
 	w.Write(dat)
 
+}
+
+func assignID(r interface{}) int {
+
+	// Gets the current highest ID number from the database
 }
