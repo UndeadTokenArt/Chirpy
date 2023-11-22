@@ -89,7 +89,6 @@ func (cfg *apiConfig) handlerPostChirp(w http.ResponseWriter, r *http.Request) {
 	{
 		cleaned := censorChirps(params.Body)
 		respBody.Body = cleaned
-		respBody.Id = assignID(respBody)
 		w.WriteHeader(201)
 	}
 	respondWithJson(w, 201, respBody)
@@ -123,9 +122,4 @@ func respondWithJson(w http.ResponseWriter, status int, message interface{}) {
 	w.WriteHeader(status)
 	w.Write(dat)
 
-}
-
-func assignID(r interface{}) int {
-
-	// Gets the current highest ID number from the database
 }

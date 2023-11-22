@@ -33,7 +33,8 @@ func main() {
 	apiRouter.Get("/metrics", apiCfg.handlerMetrics)
 	apiRouter.Get("/reset", apiCfg.handlerReset)
 	apiRouter.Get("/healthz", apiCfg.handlerHealthZ)
-	apiRouter.Post("/chirps", apiCfg.handlerChirp)
+	apiRouter.Post("/chirps", apiCfg.handlerPostChirp)
+	apiRouter.Get("/chirps", apiCfg.handlerGetChirp)
 
 	srv := &http.Server{
 		Addr:    ":8080",
