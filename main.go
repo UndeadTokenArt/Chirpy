@@ -1,50 +1,55 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/undeadtokenart/chirpy/internal/database"
 )
 
+type apiConfig struct {
+	fileserverHits int
+	DB             *database.DB
+}
+
 func main() {
+	const filepathRoot = "."
+	const port = "8080"
+
+	db, err := database.NewDB("database.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	apiCfg := apiConfig{
 		fileserverHits: 0,
+		DB:             db,
 	}
 
 	router := chi.NewRouter()
-	apiRouter := chi.NewRouter()
-	adminRouter := chi.NewRouter()
-	corsMux := middlewareCors(router)
-	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir("."))))
+	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
+	router.Handle("/app", fsHandler)
+	router.Handle("/app/*", fsHandler)
 
-	// Mounted sub router for api access and Admin access
+	apiRouter := chi.NewRouter()
+	apiRouter.Get("/healthz", handlerReadiness)
+	apiRouter.Get("/reset", apiCfg.handlerReset)
+	apiRouter.Post("/chirps", apiCfg.handlerChirpsCreate)
+	apiRouter.Get("/chirps", apiCfg.handlerChirpsRetrieve)
 	router.Mount("/api", apiRouter)
+
+	adminRouter := chi.NewRouter()
+	adminRouter.Get("/metrics", apiCfg.handlerMetrics)
 	router.Mount("/admin", adminRouter)
 
-	// handling the /app route
-	router.Handle("/app/*", fsHandler)
-	router.Handle("/app", fsHandler)
-
-	// handling the /admin routes
-	adminRouter.Get("/metrics", apiCfg.metricsHtml)
-
-	// handling the /api routes
-	apiRouter.Get("/metrics", apiCfg.handlerMetrics)
-	apiRouter.Get("/reset", apiCfg.handlerReset)
-	apiRouter.Get("/healthz", apiCfg.handlerHealthZ)
-	apiRouter.Post("/chirps", apiCfg.handlerPostChirp)
-	apiRouter.Get("/chirps", apiCfg.handlerGetChirp)
+	corsMux := middlewareCors(router)
 
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":" + port,
 		Handler: corsMux,
 	}
 
-	fmt.Println("Server is running on http://localhost:8080")
-
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		panic(err)
-	}
-
+	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
+	log.Fatal(srv.ListenAndServe())
 }

@@ -33,10 +33,7 @@ func NewDB(path string) (*DB, error) {
 func (db *DB) CreateChirp(body string) (Chirp, error) {
 	dbStructure, err := db.loadDB()
 	if err != nil {
-		return Chirp{
-			ID:   0,
-			Body: body,
-		}, err
+		return Chirp{}, err
 	}
 
 	id := len(dbStructure.Chirps) + 1
