@@ -7,6 +7,8 @@ import (
 	"sync"
 )
 
+var ErrNotExist = errors.New("resource does not exist")
+
 type DB struct {
 	path string
 	mu   *sync.RWMutex
@@ -14,11 +16,18 @@ type DB struct {
 
 type DBStructure struct {
 	Chirps map[int]Chirp `json:"chirps"`
+	Users  map[int]User  `json:"users"`
 }
 
 type Chirp struct {
 	ID   int    `json:"id"`
 	Body string `json:"body"`
+}
+
+type User struct {
+	Email          string `json:"email"`
+	ID             int    `json:"id"`
+	HashedPassword string `json:"hashedPassword"`
 }
 
 func NewDB(path string) (*DB, error) {
@@ -28,6 +37,57 @@ func NewDB(path string) (*DB, error) {
 	}
 	err := db.ensureDB()
 	return db, err
+}
+func (db *DB) CreateUser(email string, hashpass string) (User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	id := len(dbStructure.Users) + 1
+	hashedPassword := string(hashpass)
+
+	user := User{
+		ID:             id,
+		Email:          email,
+		HashedPassword: hashedPassword,
+	}
+	dbStructure.Users[id] = user
+
+	err = db.writeDB(dbStructure)
+	if err != nil {
+		return User{}, err
+	}
+
+	return user, nil
+}
+func (db *DB) GetUser(id int) (User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	user, ok := dbStructure.Users[id]
+	if !ok {
+		return User{}, ErrNotExist
+	}
+
+	return user, nil
+}
+
+func (db *DB) GetUserByEmail(email string) (User, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, err
+	}
+
+	for _, user := range dbStructure.Users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+
+	return User{}, ErrNotExist
 }
 
 func (db *DB) CreateChirp(body string) (Chirp, error) {
@@ -65,9 +125,24 @@ func (db *DB) GetChirps() ([]Chirp, error) {
 	return chirps, nil
 }
 
+func (db *DB) GetChirp(id int) (Chirp, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return Chirp{}, err
+	}
+
+	chirp, ok := dbStructure.Chirps[id]
+	if !ok {
+		return Chirp{}, ErrNotExist
+	}
+
+	return chirp, nil
+}
+
 func (db *DB) createDB() error {
 	dbStructure := DBStructure{
 		Chirps: map[int]Chirp{},
+		Users:  map[int]User{},
 	}
 	return db.writeDB(dbStructure)
 }
